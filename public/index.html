@@ -1718,6 +1718,7 @@
     let recognition = null;
     let isRecording = false;
     let baseTranscriptBeforeSession = '';
+    let voiceSessionId = 0;
 
     function openDictateModal() {
       document.getElementById('dictateModal').classList.add('open');
@@ -1731,7 +1732,7 @@
     function toggleVoiceRecording() {
       if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
         document.getElementById('voiceStatus').textContent = '⚠️ Bloqueado en archivo local sin HTTPS';
-        document.getElementById('voiceHint').innerHTML = 'Toca dentro del cuadro de texto de abajo y pulsa el <b>micrófono del teclado de tu móvil</b>, o sube este archivo a Tiiny Host / Netlify.';
+        document.getElementById('voiceHint').innerHTML = 'Toca dentro del cuadro de texto de abajo y pulsa el <b>micrófono del teclado de tu móvil</b>, o abre la aplicación desde su dirección HTTPS.';
         document.getElementById('dictationText').focus();
         return;
       }
@@ -1744,64 +1745,113 @@
         return;
       }
 
+      const area = document.getElementById('dictationText');
+      const btn = document.getElementById('recordBtn');
+
       if (isRecording) {
+        // Detener sin reiniciar. onend guardará únicamente el texto definitivo.
         isRecording = false;
-        try { recognition.stop(); } catch (e) {}
-        document.getElementById('recordBtn').classList.remove('recording');
+        try { if (recognition) recognition.stop(); } catch (e) {}
+        btn.classList.remove('recording');
         document.getElementById('voiceStatus').textContent = 'Grabación detenida';
         return;
       }
 
-      recognition = new SR();
-      recognition.lang = 'es-ES';
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      baseTranscriptBeforeSession = area.value.trim();
+      voiceSessionId++;
+      isRecording = true;
+      startDictationRecognition(SR, area, voiceSessionId);
+    }
 
-      const area = document.getElementById('dictationText');
-      baseTranscriptBeforeSession = area.value ? area.value.trim() + ' ' : '';
+    function startDictationRecognition(SR, area, sessionId) {
+      if (!isRecording || sessionId !== voiceSessionId) return;
 
-      recognition.onstart = () => {
-        isRecording = true;
-        document.getElementById('recordBtn').classList.add('recording');
+      const instance = new SR();
+      recognition = instance;
+      instance.lang = 'es-ES';
+      // En Android es más fiable iniciar sesiones cortas y encadenarlas al finalizar.
+      instance.continuous = false;
+      instance.interimResults = true;
+      instance.maxAlternatives = 1;
+
+      let finalForThisInstance = '';
+      let lastRenderedText = '';
+
+      instance.onstart = () => {
+        if (sessionId !== voiceSessionId) return;
+        btnVoiceRecordingState(true);
         document.getElementById('voiceStatus').textContent = '🔴 Escuchando tu receta... Habla con naturalidad';
         document.getElementById('voiceHint').textContent = 'Pulsa de nuevo el botón rojo cuando termines';
       };
 
-      recognition.onresult = (event) => {
-        let sessionFinal = '';
+      instance.onresult = (event) => {
+        if (sessionId !== voiceSessionId || recognition !== instance) return;
+        let currentFinal = '';
         let interim = '';
+        // Cada evento contiene el conjunto actualizado de resultados de ESTA sesión.
+        // Se reconstruye el texto en lugar de concatenar cada actualización recibida.
         for (let i = 0; i < event.results.length; i++) {
-          const txt = event.results[i][0].transcript;
-          if (event.results[i].isFinal) sessionFinal += txt + ' ';
-          else interim += txt;
+          const result = event.results[i];
+          const transcript = (result[0] && result[0].transcript ? result[0].transcript : '').trim();
+          if (!transcript) continue;
+          if (result.isFinal) currentFinal += (currentFinal ? ' ' : '') + transcript;
+          else interim += (interim ? ' ' : '') + transcript;
         }
-        area.value = (baseTranscriptBeforeSession + sessionFinal + interim).trim();
+        finalForThisInstance = currentFinal;
+        const parts = [baseTranscriptBeforeSession, finalForThisInstance, interim].filter(Boolean);
+        const rendered = parts.join(' ').replace(/\s+/g, ' ').trim();
+        if (rendered !== lastRenderedText) {
+          area.value = rendered;
+          lastRenderedText = rendered;
+        }
       };
 
-      recognition.onerror = (event) => {
-        isRecording = false;
-        document.getElementById('recordBtn').classList.remove('recording');
-        if (event.error === 'not-allowed') {
+      instance.onerror = (event) => {
+        if (sessionId !== voiceSessionId || recognition !== instance) return;
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          isRecording = false;
           document.getElementById('voiceStatus').textContent = 'Permiso de micrófono denegado';
-          document.getElementById('voiceHint').textContent = 'Activa el micrófono en el candado de Chrome o usa el micrófono de tu teclado móvil.';
-        } else {
+          document.getElementById('voiceHint').textContent = 'Activa el permiso del micrófono para Chrome en los ajustes del móvil.';
+        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
           document.getElementById('voiceStatus').textContent = 'Dictado pausado (' + event.error + ')';
         }
       };
 
-      recognition.onend = () => {
+      instance.onend = () => {
+        if (sessionId !== voiceSessionId || recognition !== instance) return;
+
+        // Confirmar una sola vez el texto final de esta instancia antes de crear otra.
+        if (finalForThisInstance) {
+          baseTranscriptBeforeSession = [baseTranscriptBeforeSession, finalForThisInstance]
+            .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        }
+        area.value = baseTranscriptBeforeSession;
+
         if (isRecording) {
-          try { recognition.start(); } catch (e) {}
+          // Nueva instancia para evitar que Android reutilice índices/resultados anteriores.
+          startDictationRecognition(SR, area, sessionId);
         } else {
-          document.getElementById('recordBtn').classList.remove('recording');
+          recognition = null;
+          btnVoiceRecordingState(false);
+          if (document.getElementById('voiceStatus').textContent.includes('Escuchando')) {
+            document.getElementById('voiceStatus').textContent = 'Grabación detenida';
+          }
         }
       };
 
       try {
-        recognition.start();
+        instance.start();
       } catch (e) {
-        showToast('No se pudo iniciar el micrófono');
+        isRecording = false;
+        recognition = null;
+        btnVoiceRecordingState(false);
+        document.getElementById('voiceStatus').textContent = 'No se pudo iniciar el micrófono. Inténtalo de nuevo.';
       }
+    }
+
+    function btnVoiceRecordingState(active) {
+      const btn = document.getElementById('recordBtn');
+      if (btn) btn.classList.toggle('recording', !!active);
     }
 
     // AI / Smart NLP Recipe Structuring
