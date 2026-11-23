@@ -1,0 +1,10 @@
+{
+  "name": "mi-recetario-openai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mi Recetario con OpenAI en servidor y Gemini como alternativa",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "express": "^4.21.2" }
+}
