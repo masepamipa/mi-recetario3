@@ -1039,6 +1039,69 @@
     @media(min-width:700px){.planner-days{grid-template-columns:1fr 1fr}.planner-wrap{padding:24px}.planner-head h2{font-size:27px}}
     .edit-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.edit-form-grid label{font-size:11px;color:var(--text-secondary);font-weight:800}.edit-form-grid input,.edit-form-grid textarea,.edit-form-grid select{display:block;width:100%;margin-top:5px;padding:11px;border:1px solid var(--border);border-radius:12px;background:var(--elevated);color:var(--text);font:inherit}.edit-form-grid .full{grid-column:1/-1}.edit-form-grid textarea{min-height:90px;resize:vertical}
 
+
+    /* Ajustes responsive para móviles Android: evitar desbordamientos horizontales */
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 760px;
+      min-width: 0;
+      overflow-x: clip;
+    }
+    .app-shell > *, .topbar > *, .brand, .controls-area,
+    .section-header, .recipes-list, .planner-wrap, .shop-container {
+      min-width: 0;
+      max-width: 100%;
+    }
+    img, video, canvas, svg {
+      max-width: 100%;
+    }
+    input, select, textarea, button {
+      max-width: 100%;
+      min-width: 0;
+    }
+    .topbar { flex-wrap: nowrap; }
+    .brand { min-width: 0; flex: 1 1 auto; }
+    .brand h1, .brand p { overflow-wrap: anywhere; }
+    .recipes-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .planner-days { grid-template-columns: minmax(0, 1fr); }
+    .planner-day, .planner-slot { min-width: 0; }
+    .planner-head { flex-wrap: wrap; }
+    .planner-weeknav { min-width: 0; max-width: 100%; }
+    .planner-weeknav button { padding-left: 8px; padding-right: 8px; }
+    .modal-backdrop { width: 100%; max-width: 100%; overflow-x: hidden; }
+    .modal-sheet { width: 100%; max-width: 540px; min-width: 0; }
+    .edit-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bottom-nav { width: 100%; max-width: 760px; }
+
+    @media (max-width: 560px) {
+      .app-shell { width: 100%; padding-left: 0; padding-right: 0; }
+      .topbar { padding-left: 14px; padding-right: 14px; gap: 8px; }
+      .controls-area, .section-header { padding-left: 14px; padding-right: 14px; }
+      .chips-row { padding-left: 14px; padding-right: 14px; }
+      .recipes-list { grid-template-columns: minmax(0, 1fr); padding-left: 14px; padding-right: 14px; }
+      .planner-wrap { padding-left: 12px; padding-right: 12px; }
+      .planner-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+      .planner-slot { padding: 8px; }
+      .shop-container { padding: 14px; }
+      .bottom-nav { padding-left: 10px; padding-right: 10px; }
+      .modal-sheet { padding-left: 14px; padding-right: 14px; border-radius: 22px 22px 0 0; }
+      .edit-form-grid { grid-template-columns: minmax(0, 1fr); }
+      .edit-form-grid .full { grid-column: 1; }
+    }
+    @media (max-width: 360px) {
+      .brand-logo { flex: 0 0 40px; width: 40px; height: 40px; }
+      .brand h1 { font-size: 18px; }
+      .planner-head h2 { font-size: 20px; }
+      .planner-weeknav { gap: 4px; }
+      .planner-weeknav button { padding: 7px 6px; font-size: 12px; }
+      .planner-slots { grid-template-columns: minmax(0, 1fr); }
+    }
+
   </style>
 </head>
 <body>
