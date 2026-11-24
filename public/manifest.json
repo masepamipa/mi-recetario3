@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Mi Recetario",
+  "short_name": "Mi Recetario",
+  "description": "Tu recetario personal y planificador de comidas",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFFBF7",
+  "theme_color": "#365d43",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
